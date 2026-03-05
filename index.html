@@ -13,105 +13,84 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
-        
-        :root {
-            --stark-navy: #001240;
-            --stark-red: #cc0000;
-            --stark-glass: rgba(255, 255, 255, 0.05);
-        }
-
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--stark-navy);
-            color: white;
             margin: 0;
+            background-color: #001240;
+            color: white;
+            font-family: sans-serif;
             overflow-x: hidden;
-            background: radial-gradient(circle at top right, #001a5e, #00081a);
         }
-
-        /* Carbon Fiber Texture Overlay */
-        .carbon-bg {
-            background-image: linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1)), 
-                              linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1));
-            background-size: 4px 4px;
-        }
-
         .glass-panel {
-            background: var(--stark-glass);
-            backdrop-filter: blur(15px);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            transition: all 0.3s ease;
+            border-radius: 12px;
+            padding: 20px;
         }
-
-        .glass-panel:hover {
-            border-color: var(--stark-red);
-            box-shadow: 0 0 20px rgba(204, 0, 0, 0.2);
-        }
-
-        .stat-value { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-        
-        /* VR UI Fixes */
-        a-scene { height: 600px; width: 100%; border-radius: 20px; overflow: hidden; }
+        .stark-red { color: #cc0000; }
+        .bg-stark-red { background-color: #cc0000; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
-        // --- UI KOMPONENTEN ---
-        const Card = ({ title, icon: Icon, children }) => (
-            <div className="glass-panel p-6 carbon-bg mb-4">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-red-600 rounded-lg"><Icon size={20} /></div>
-                    <h3 className="text-lg font-black tracking-tight uppercase italic">{title}</h3>
-                </div>
-                {children}
-            </div>
-        );
-
-        // --- DASHBOARD (MACBOOK VIEW) ---
-        const Dashboard = ({ onEnterVR }) => {
-            const [medicalData, setMedicalData] = useState({ hrv: 75, sleep: 8.2, weight: 82.4 });
-            const [budget, setBudget] = useState(12500000);
+        const App = () => {
+            const [view, setView] = useState('dashboard');
 
             return (
-                <div className="p-8 max-w-7xl mx-auto">
-                    <header className="flex justify-between items-center mb-12 border-b border-white/10 pb-6">
-                        <div>
-                            <h1 className="text-4xl font-black italic tracking-tighter">STARK <span className="text-red-600">PERFORMANCE</span></h1>
-                            <p className="text-white/40 font-mono text-xs mt-1 uppercase tracking-widest">Elite Coaching System v2.0 // Nagelsmann Logic</p>
-                        </div>
+                <div className="min-h-screen p-8 bg-gradient-to-br from-[#001240] to-[#00081a]">
+                    <header className="flex justify-between items-center mb-10 border-b border-white/10 pb-6">
+                        <h1 className="text-3xl font-black italic tracking-tighter">
+                            STARK <span className="text-red-600">PERFORMANCE</span> 2.0
+                        </h1>
                         <button 
-                            onClick={onEnterVR}
-                            className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-black flex items-center gap-3 transition-transform active:scale-95 shadow-lg shadow-red-900/20"
+                            onClick={() => setView(view === 'dashboard' ? 'vr' : 'dashboard')}
+                            className="bg-red-600 px-6 py-2 rounded-full font-bold uppercase text-sm"
                         >
-                            <lucide.Glasses size={24} /> ENTER VR COMMAND CENTER
+                            {view === 'dashboard' ? 'Enter VR Mode' : 'Back to Dashboard'}
                         </button>
                     </header>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* ARZT-TONI MODULE */}
-                        <Card title="Arzt-Toni (Medical)" icon={lucide.Activity}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] uppercase text-white/40 block mb-1">HRV (Readiness)</label>
-                                    <input type="number" value={medicalData.hrv} onChange={e => setMedicalData({...medicalData, hrv: e.target.value})} className="bg-black/40 border border-white/10 w-full p-2 rounded text-red-500 font-bold" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-[10px] uppercase text-white/40 block mb-1">Schlaf (h)</label>
-                                        <input type="number" step="0.1" value={medicalData.sleep} onChange={e => setMedicalData({...medicalData, sleep: e.target.value})} className="bg-black/40 border border-white/10 w-full p-2 rounded text-xs" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase text-white/40 block mb-1">Gewicht (kg)</label>
-                                        <input type="number" step="0.1" value={medicalData.weight} onChange={e => setMedicalData({...medicalData, weight: e.target.value})} className="bg-black/40 border border-white/10 w-full p-2 rounded text-xs" />
-                                    </div>
-                                </div>
+                    {view === 'dashboard' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="glass-panel">
+                                <h3 className="font-bold mb-4 uppercase text-xs text-white/40 tracking-widest">Status: Arzt-Toni</h3>
+                                <div className="text-2xl font-mono tracking-tighter text-red-500">READY</div>
+                                <p className="text-[10px] mt-2 text-white/60 font-mono">Bio-Data Sync: Active</p>
                             </div>
+                            <div className="glass-panel">
+                                <h3 className="font-bold mb-4 uppercase text-xs text-white/40 tracking-widest">Status: Manager-Toni</h3>
+                                <div className="text-2xl font-mono tracking-tighter">€ 12.5M</div>
+                                <p className="text-[10px] mt-2 text-white/60 font-mono">Budget: Operational</p>
+                            </div>
+                            <div className="glass-panel">
+                                <h3 className="font-bold mb-4 uppercase text-xs text-white/40 tracking-widest">NLZ Modul</h3>
+                                <div className="text-2xl font-mono tracking-tighter">ONLINE</div>
+                                <p className="text-[10px] mt-2 text-white/60 font-mono">Funino Courts: 4 Active</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-white/10">
+                            <a-scene embedded>
+                                <a-sky color="#00081a"></a-sky>
+                                <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#001240"></a-plane>
+                                <a-text value="TONI 2.0 VR CENTER" align="center" position="0 2 -3" width="6"></a-text>
+                                <a-box position="0 0.5 -5" color="#cc0000"></a-box>
+                            </a-scene>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>                            </div>
                         </Card>
 
                         {/* MANAGER-TONI MODULE */}
