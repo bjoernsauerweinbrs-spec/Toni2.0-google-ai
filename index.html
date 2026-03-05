@@ -3,29 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toni 2.0 - Stark Elite Command Center</title>
+    <title>TONI 2.0 | Stark Performance Elite</title>
     
-    <!-- Libraries -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
         
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #001240;
-            color: white;
-            margin: 0;
-            overflow: hidden;
+        :root {
+            --stark-navy: #001240;
+            --stark-red: #cc0000;
+            --stark-glass: rgba(255, 255, 255, 0.05);
         }
 
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--stark-navy);
+            color: white;
+            margin: 0;
+            overflow-x: hidden;
+            background: radial-gradient(circle at top right, #001a5e, #00081a);
+        }
+
+        /* Carbon Fiber Texture Overlay */
+        .carbon-bg {
+            background-image: linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1)), 
+                              linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1));
+            background-size: 4px 4px;
+        }
+
+        .glass-panel {
+            background: var(--stark-glass);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: var(--stark-red);
+            box-shadow: 0 0 20px rgba(204, 0, 0, 0.2);
+        }
+
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+        
+        /* VR UI Fixes */
+        a-scene { height: 600px; width: 100%; border-radius: 20px; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- UI KOMPONENTEN ---
+        const Card = ({ title, icon: Icon, children }) => (
+            <div className="glass-panel p-6 carbon-bg mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-red-600 rounded-lg"><Icon size={20} /></div>
+                    <h3 className="text-lg font-black tracking-tight uppercase italic">{title}</h3>
+                </div>
+                {children}
+            </div>
+        );
+
+        // --- DASHBOARD (MACBOOK VIEW) ---
+        const Dashboard = ({ onEnterVR }) => {
+            const [medicalData, setMedicalData] = useState({ hrv: 75, sleep: 8.2, weight: 82.4 });
+            const [budget, setBudget] = useState(12500000);
+
+            return (
+                <div className="p-8 max-w-7xl mx-auto">
+                    <header className="flex justify-between items-center mb-12 border-b border-white/10 pb-6">
+                        <div>
+                            <h1 className="text-4xl font-black italic tracking-tighter">STARK <span className="text-red-600">PERFORMANCE</span></h1>
+                            <p className="text-white/40 font-mono text-xs mt-1 uppercase tracking-widest">Elite Coaching System v2.0 // Nagelsmann Logic</p>
+                        </div>
+                        <button 
+                            onClick={onEnterVR}
+                            className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-black flex items-center gap-3 transition-transform active:scale-95 shadow-lg shadow-red-900/20"
+                        >
+                            <lucide.Glasses size={24} /> ENTER VR COMMAND CENTER
+                        </button>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* ARZT-TONI MODULE */}
+                        <Card title="Arzt-Toni (Medical)" icon={lucide.Activity}>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] uppercase text-white/40 block mb-1">HRV (Readiness)</label>
+                                    <input type="number" value={medicalData.hrv} onChange={e => setMedicalData({...medicalData, hrv: e.target.value})} className="bg-black/40 border border-white/10 w-full p-2 rounded text-red-500 font-bold" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-[10px] uppercase text-white/40 block mb-1">Schlaf (h)</label>
+                                        <input type="number" step="0.1" value={medicalData.sleep} onChange={e => setMedicalData({...medicalData, sleep: e.target.value})} className="bg-black/40 border border-white/10 w-full p-2 rounded text-xs" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] uppercase text-white/40 block mb-1">Gewicht (kg)</label>
+                                        <input type="number" step="0.1" value={medicalData.weight} onChange={e => setMedicalData({...medicalData, weight: e.target.value})} className="bg-black/40 border border-white/10 w-full p-2 rounded text-xs" />
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* MANAGER-TONI MODULE */}
+                        <Card title="Manager-Toni (CFO)" icon={lucide.TrendingUp}>
+                            <div className="text-center py-4">
+                                <div className="text-3xl font-black text-white stat-value">€ {(budget/1000000).toFixed(1)}M</div>
+                                <p className="text-[10px] text-white/30 uppercase mt-2 italic">Available Transfer Budget</p>
+                            </div>
+                            <input type="range" min="0" max="50000000" step="1000000" value={budget} onChange={e => setBudget(e.target.value)} className="w-full h-1 bg-red-900 rounded-lg appearance-none cursor-pointer accent-red-600" />
+                        </Card>
+
+                        {/* NLZ MODULE */}
+                        <Card title="NLZ (Youth Academy)" icon={lucide.School}>
+                            <div className="space-y-3">
+                                <div className="flex justify-between text-xs border-b border-white/5 pb-2">
+                                    <span>Funino Active</span>
+                                    <span className="text-green-500">Online</span>
+                                </div>
+                                <div className="flex justify-between text-xs border-b border-white/5 pb-2">
+                                    <span>G-Jugend Capacity</span>
+                                    <span>85%</span>
+                                </div>
+                                <div className="p-2 bg-white/5 rounded text-[10px] italic text-white/60">
+                                    Taktik-Lernfeld: "Raumdeckung" aktuell aktiv.
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* TRAINER-TONI MODULE */}
+                        <Card title="Trainer-Toni (Tactical)" icon={lucide.Layout}>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button className="p-3 bg-red-600/20 border border-red-600/40 rounded text-[10px] font-bold uppercase">4-4-2 (Def)</button>
+                                <button className="p-3 bg-white/5 border border-white/10 rounded text-[10px] font-bold uppercase">3-4-3 (Off)</button>
+                            </div>
+                            <div className="mt-4 p-2 border border-dashed border-white/10 rounded text-[10px] text-center text-white/40">
+                                Eric Meijer Screen Sync: Bereit
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- VR CENTER (QUEST VIEW) ---
+        const VRCommandCenter = ({ onExit }) => {
+            return (
+                <div className="relative w-full h-screen">
+                    <button 
+                        onClick={onExit}
+                        className="absolute top-10 left-10 z-50 bg-black/80 p-4 rounded-full border border-white/20 hover:bg-red-600 transition"
+                    >
+                        <lucide.ArrowLeft size={24} />
+                    </button>
+                    
+                    <a-scene embedded vr-mode-ui="enabled: true">
+                        {/* Environment */}
+                        <a-sky color="#00081a"></a-sky>
+                        <a-grid position="0 0 0" material="color: #ffffff; opacity: 0.1"></a-grid>
+                        
+                        {/* Eric Meijer Tactical Screen */}
+                        <a-plane position="0 2.5 -6" width="8" height="4.5" color="#000" material="opacity: 0.9; metalness: 0.5">
+                            <a-text value="ERIC MEIJER ANALYSIS BOARD" align="center" position="0 2 0.1" width="6" font="mozillavr"></a-text>
+                            <a-rect color="#cc0000" position="0 -2 0.1" width="8" height="0.1"></a-rect>
+                        </a-plane>
+
+                        {/* NLZ FUNINO ZONE */}
+                        <a-entity position="-10 0 -10">
+                            <a-plane rotation="-90 0 0" width="10" height="6" color="#004d00" material="opacity: 0.5">
+                                <a-text value="NLZ: FUNINO COURT 1" align="center" rotation="0 0 0" position="0 0.1 0" width="10" color="white"></a-text>
+                            </a-plane>
+                            {/* Goals */}
+                            <a-box position="-5 0.5 2" width="0.2" height="1" depth="1" color="white"></a-box>
+                            <a-box position="-5 0.5 -2" width="0.2" height="1" depth="1" color="white"></a-box>
+                            <a-box position="5 0.5 2" width="0.2" height="1" depth="1" color="white"></a-box>
+                            <a-box position="5 0.5 -2" width="0.2" height="1" depth="1" color="white"></a-box>
+                        </a-entity>
+
+                        {/* Manager Podium */}
+                        <a-cylinder position="6 0 -4" radius="2" height="0.2" color="#333"></a-cylinder>
+                        <a-text value="MANAGEMENT ZONE" align="center" position="6 2 -4" width="4"></a-text>
+
+                        {/* Lighting */}
+                        <a-light type="ambient" color="#445451"></a-light>
+                        <a-light type="point" intensity="2" position="2 4 4"></a-light>
+
+                        {/* Controller Support */}
+                        <a-entity laser-controls="hand: right"></a-entity>
+                        <a-entity laser-controls="hand: left"></a-entity>
+                    </a-scene>
+                    
+                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-600/20 backdrop-blur px-6 py-3 rounded-full border border-red-600/40 text-[10px] font-bold uppercase tracking-[0.2em]">
+                        Spatial Audio & Joystick Drawing Enabled
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP LOGIC ---
+        const App = () => {
+            const [mode, setMode] = useState('dashboard'); // dashboard | vr
+
+            return mode === 'dashboard' ? (
+                <Dashboard onEnterVR={() => setMode('vr')} />
+            ) : (
+                <VRCommandCenter onExit={() => setMode('dashboard')} />
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>mily: 'JetBrains Mono', monospace; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
