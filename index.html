@@ -1,13 +1,423 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toni 2.0 - Stark Elite Command Center</title>
+    
+    <!-- Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #001240;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.3); border-radius: 10px; }
+
+        /* A-Frame specific styles */
+        .a-canvas { z-index: 0; }
+        .vr-ui-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            pointer-events: auto;
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stark: {
+                            blue: '#001240',
+                            navy: '#061A40',
+                            cyan: '#22d3ee',
+                            red: '#E21B4D',
+                            gold: '#FFCC00'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        const { motion, AnimatePresence } = window.Motion || { motion: (props) => <div {...props} />, AnimatePresence: (props) => props.children };
+
+        // --- MOCK DATA ---
+        const INITIAL_PLAYERS = [
+            { id: 'p1', name: 'Erling H.', category: 'PRO', readiness_score: 95, tactical_position: 'ST', hrv_data: [{time: '08:00', value: 75}], sleep_cycles: { deep_sleep: '2.5h', rem: '2h' }, scouting_metrics: { stamina: 88, speed: 94 }, stats: { pace: 89, shooting: 93, passing: 65, dribbling: 80, defending: 45, physical: 88 } },
+            { id: 'p2', name: 'Kevin D.', category: 'PRO', readiness_score: 88, tactical_position: 'CM', hrv_data: [{time: '08:00', value: 82}], sleep_cycles: { deep_sleep: '1.5h', rem: '2.5h' }, scouting_metrics: { stamina: 85, speed: 78 }, stats: { pace: 74, shooting: 86, passing: 94, dribbling: 87, defending: 64, physical: 74 } },
+            { id: 'p3', name: 'Ruben D.', category: 'PRO', readiness_score: 92, tactical_position: 'CB', hrv_data: [{time: '08:00', value: 68}], sleep_cycles: { deep_sleep: '2h', rem: '1.5h' }, scouting_metrics: { stamina: 92, speed: 75 }, stats: { pace: 72, shooting: 35, passing: 70, dribbling: 68, defending: 89, physical: 86 } },
+            { id: 'y1', name: 'Luka M.', category: 'YOUTH', readiness_score: 78, tactical_position: 'CAM', hrv_data: [], sleep_cycles: { deep_sleep: '2h', rem: '2h' }, scouting_metrics: {}, stats: { pace: 82, shooting: 75, passing: 80, dribbling: 85, defending: 50, physical: 65 } }
+        ];
+
+        // --- COMPONENTS ---
+
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const LucideIcon = lucide[name.charAt(0).toUpperCase() + name.slice(1)];
+            return LucideIcon ? <LucideIcon size={size} className={className} /> : null;
+        };
+
+        // --- GEMINI SERVICE (FETCH VERSION) ---
+        const GeminiService = {
+            apiKey: localStorage.getItem('GEMINI_API_KEY') || '',
+            
+            async generate(prompt, model = "gemini-1.5-flash") {
+                if (!this.apiKey) return "Bitte API Key in den Einstellungen hinterlegen.";
+                
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
+                    });
+                    const data = await response.json();
+                    return data.candidates[0].content.parts[0].text;
+                } catch (e) {
+                    console.error(e);
+                    return "Fehler bei der KI-Anfrage.";
+                }
+            }
+        };
+
+        // --- VR SPACE (A-FRAME) ---
+        const VRSpace = ({ players, onExit }) => {
+            useEffect(() => {
+                // A-Frame components can be registered here if needed
+            }, []);
+
+            return (
+                <div className="fixed inset-0 z-[1000] bg-black">
+                    <div className="vr-ui-overlay flex gap-4">
+                        <button 
+                            onClick={onExit}
+                            className="px-6 py-3 bg-red-600 text-white font-black italic rounded-xl shadow-2xl hover:bg-red-700 transition-all uppercase tracking-tighter"
+                        >
+                            Exit VR Mode
+                        </button>
+                    </div>
+
+                    <a-scene embedded style={{height: '100vh', width: '100vw'}}>
+                        <a-assets>
+                            <img id="sky" src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=2000" />
+                        </a-assets>
+
+                        <a-sky src="#sky" rotation="0 -90 0"></a-sky>
+                        
+                        {/* Floor */}
+                        <a-plane position="0 0 0" rotation="-90 0 0" width="100" height="100" color="#001240" opacity="0.8"></a-plane>
+                        <a-grid position="0 0.01 0" rotation="-90 0 0" width="100" height="100" color="#22d3ee" opacity="0.2"></a-grid>
+
+                        {/* Tactical Board (Front) */}
+                        <a-entity position="0 2 -5">
+                            <a-plane width="6" height="4" color="#061A40" opacity="0.9" rounded="0.2">
+                                <a-text value="TACTICAL HUB" position="0 1.8 0.1" align="center" color="#22d3ee" width="6"></a-text>
+                                <a-plane position="0 0 0.05" width="5.5" height="3" color="#0a2e18">
+                                    {/* Pitch Markings */}
+                                    <a-ring color="white" radius-inner="0.4" radius-outer="0.42" position="0 0 0.01"></a-ring>
+                                    <a-line start="-2.75 0 0.01" end="2.75 0 0.01" color="white"></a-line>
+                                </a-plane>
+                            </a-plane>
+                        </a-entity>
+
+                        {/* Medical Lab (Left) */}
+                        <a-entity position="-6 2 0" rotation="0 90 0">
+                            <a-plane width="5" height="4" color="#061A40" opacity="0.9">
+                                <a-text value="MEDICAL LAB" position="0 1.8 0.1" align="center" color="#22d3ee" width="5"></a-text>
+                                {players.slice(0, 3).map((p, i) => (
+                                    <a-entity key={p.id} position={`0 ${0.5 - i * 0.8} 0.1`}>
+                                        <a-text value={`${p.name}: ${p.readiness_score}%`} align="center" width="4"></a-text>
+                                    </a-entity>
+                                ))}
+                            </a-plane>
+                        </a-entity>
+
+                        {/* Management Zone (Right) */}
+                        <a-entity position="6 2 0" rotation="0 -90 0">
+                            <a-plane width="5" height="4" color="#061A40" opacity="0.9">
+                                <a-text value="MANAGEMENT ZONE" position="0 1.8 0.1" align="center" color="#FFCC00" width="5"></a-text>
+                                <a-text value="SQUAD VALUE: 450M" position="0 0 0.1" align="center" width="4"></a-text>
+                            </a-entity>
+                        </a-entity>
+
+                        {/* AI Advisor (Back) */}
+                        <a-entity position="0 2 5" rotation="0 180 0">
+                            <a-plane width="5" height="4" color="#061A40" opacity="0.9">
+                                <a-text value="AI ADVISOR" position="0 1.8 0.1" align="center" color="#8b5cf6" width="5"></a-text>
+                                <a-text value="SYSTEM READY" position="0 0 0.1" align="center" width="4"></a-text>
+                            </a-entity>
+                        </a-entity>
+
+                        <a-camera>
+                            <a-cursor color="#22d3ee"></a-cursor>
+                        </a-camera>
+                    </a-scene>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        function App() {
+            const [activeModule, setActiveModule] = useState('TACTICS');
+            const [isVRMode, setIsVRMode] = useState(false);
+            const [players, setPlayers] = useState(INITIAL_PLAYERS);
+            const [apiKey, setApiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || '');
+            const [showSettings, setShowSettings] = useState(false);
+
+            const saveApiKey = () => {
+                localStorage.setItem('GEMINI_API_KEY', apiKey);
+                GeminiService.apiKey = apiKey;
+                setShowSettings(false);
+            };
+
+            return (
+                <div className="flex h-screen bg-stark-blue overflow-hidden">
+                    {/* Sidebar */}
+                    <aside className="w-64 bg-stark-navy border-r border-white/10 flex flex-col">
+                        <div className="p-6">
+                            <h1 className="text-2xl font-black italic text-white tracking-tighter">STARK ELITE</h1>
+                            <p className="text-[10px] font-mono text-stark-cyan uppercase tracking-widest mt-1">Command Center 2.0</p>
+                        </div>
+
+                        <nav className="flex-1 px-4 space-y-2">
+                            {[
+                                { id: 'TACTICS', label: 'Tactical Hub', icon: 'Shield' },
+                                { id: 'MEDICAL', label: 'Medical Lab', icon: 'Activity' },
+                                { id: 'BRIEFCASE', label: 'Briefcase', icon: 'Briefcase' },
+                                { id: 'LOCKER', label: 'Locker Room', icon: 'Users' }
+                            ].map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveModule(item.id)}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                                        activeModule === item.id ? 'bg-stark-cyan text-stark-blue shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    <Icon name={item.icon} size={20} />
+                                    {item.label}
+                                </button>
+                            ))}
+                        </nav>
+
+                        <div className="p-4 border-t border-white/10 space-y-2">
+                            <button 
+                                onClick={() => setIsVRMode(true)}
+                                className="w-full py-3 bg-stark-cyan text-stark-blue font-black italic rounded-xl shadow-2xl hover:bg-cyan-400 transition-all uppercase tracking-tighter"
+                            >
+                                Enter VR Mode
+                            </button>
+                            <button 
+                                onClick={() => setShowSettings(true)}
+                                className="w-full py-2 text-slate-500 hover:text-white text-xs font-bold uppercase tracking-widest"
+                            >
+                                Settings
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* Main Content */}
+                    <main className="flex-1 relative flex flex-col">
+                        <header className="h-16 border-b border-white/10 flex items-center justify-between px-8 bg-stark-navy/80 backdrop-blur-md">
+                            <h2 className="text-xl font-black italic text-white uppercase tracking-tight">{activeModule}</h2>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="text-xs font-bold text-white">Julian D.</p>
+                                    <p className="text-[10px] text-slate-500 uppercase">Head Trainer</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-full bg-stark-cyan/20 border border-stark-cyan/30 flex items-center justify-center text-stark-cyan font-bold">JD</div>
+                            </div>
+                        </header>
+
+                        <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+                            {activeModule === 'TACTICS' && (
+                                <div className="space-y-8">
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="lg:col-span-2 bg-stark-navy border border-white/10 rounded-3xl p-8 h-[500px] relative overflow-hidden">
+                                            <div className="absolute inset-0 bg-[#0a2e18] opacity-20"></div>
+                                            <div className="relative h-full flex flex-col items-center justify-center">
+                                                <div className="w-full max-w-2xl aspect-[3/2] border-2 border-white/20 rounded-lg relative">
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="w-24 h-24 border-2 border-white/20 rounded-full"></div>
+                                                        <div className="absolute left-1/2 -translate-x-1/2 h-full w-px bg-white/20"></div>
+                                                    </div>
+                                                </div>
+                                                <p className="mt-4 text-slate-500 font-mono text-xs uppercase tracking-widest">Tactical Visualization Engine</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-stark-navy border border-white/10 rounded-3xl p-6">
+                                            <h3 className="text-sm font-bold text-stark-cyan uppercase tracking-widest mb-4">Squad Readiness</h3>
+                                            <div className="space-y-4">
+                                                {players.map(p => (
+                                                    <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                                                        <span className="font-bold text-sm">{p.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-2 h-2 rounded-full ${p.readiness_score > 85 ? 'bg-emerald-500' : 'bg-yellow-500'}`}></div>
+                                                            <span className="font-mono text-xs">{p.readiness_score}%</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeModule === 'MEDICAL' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {players.map(p => (
+                                        <div key={p.id} className="bg-stark-navy border border-white/10 rounded-3xl p-6 hover:border-stark-cyan/30 transition-all">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h3 className="font-black italic text-lg">{p.name}</h3>
+                                                <span className="text-[10px] font-mono text-stark-cyan border border-stark-cyan/30 px-2 py-0.5 rounded">{p.tactical_position}</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Readiness</p>
+                                                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-stark-cyan" style={{width: `${p.readiness_score}%`}}></div>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="bg-white/5 p-2 rounded-lg">
+                                                        <p className="text-[8px] text-slate-500 uppercase">Deep Sleep</p>
+                                                        <p className="text-xs font-bold">{p.sleep_cycles.deep_sleep}</p>
+                                                    </div>
+                                                    <div className="bg-white/5 p-2 rounded-lg">
+                                                        <p className="text-[8px] text-slate-500 uppercase">REM</p>
+                                                        <p className="text-xs font-bold">{p.sleep_cycles.rem}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {activeModule === 'BRIEFCASE' && (
+                                <div className="max-w-4xl mx-auto space-y-6">
+                                    <div className="bg-gradient-to-br from-stark-navy to-slate-900 border border-stark-gold/30 rounded-3xl p-8 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                                            <Icon name="Briefcase" size={120} className="text-stark-gold" />
+                                        </div>
+                                        <h3 className="text-3xl font-black italic text-white uppercase tracking-tighter mb-2">Manager Office</h3>
+                                        <p className="text-stark-gold font-mono text-xs uppercase tracking-widest mb-8">Strategic & Financial Command</p>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Estimated Squad Value</p>
+                                                <p className="text-4xl font-black text-white italic tracking-tighter">€450.000.000</p>
+                                            </div>
+                                            <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Sponsorship ROI</p>
+                                                <p className="text-4xl font-black text-emerald-400 italic tracking-tighter">+12.4%</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeModule === 'LOCKER' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {players.map(p => (
+                                        <div key={p.id} className="bg-stark-navy border border-white/10 rounded-3xl p-8 flex flex-col items-center text-center group hover:bg-white/5 transition-all">
+                                            <div className="w-24 h-24 rounded-full bg-stark-cyan/10 border-2 border-stark-cyan/30 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                                <span className="text-3xl font-black text-stark-cyan">{p.name.charAt(0)}</span>
+                                            </div>
+                                            <h3 className="text-xl font-black italic text-white uppercase tracking-tight mb-1">{p.name}</h3>
+                                            <p className="text-xs font-mono text-stark-cyan uppercase tracking-widest mb-6">{p.tactical_position}</p>
+                                            
+                                            <div className="w-full grid grid-cols-3 gap-2">
+                                                {Object.entries(p.stats).map(([key, val]) => (
+                                                    <div key={key} className="bg-black/40 p-2 rounded-lg border border-white/5">
+                                                        <p className="text-[8px] text-slate-500 uppercase">{key}</p>
+                                                        <p className="text-xs font-bold text-white">{val}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </main>
+
+                    {/* Settings Modal */}
+                    <AnimatePresence>
+                        {showSettings && (
+                            <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="bg-stark-navy border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl"
+                                >
+                                    <h3 className="text-2xl font-black italic text-white uppercase tracking-tight mb-6">Settings</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Gemini API Key</label>
+                                            <input 
+                                                type="password"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                className="w-full bg-stark-blue border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-stark-cyan transition-all"
+                                                placeholder="Enter your key..."
+                                            />
+                                            <p className="text-[10px] text-slate-500 mt-2">Your key is stored locally in your browser.</p>
+                                        </div>
+                                        <div className="flex gap-3 pt-4">
+                                            <button 
+                                                onClick={saveApiKey}
+                                                className="flex-1 py-3 bg-stark-cyan text-stark-blue font-black italic rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-tighter"
+                                            >
+                                                Save Settings
+                                            </button>
+                                            <button 
+                                                onClick={() => setShowSettings(false)}
+                                                className="px-6 py-3 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 transition-all uppercase text-xs"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* VR Mode Overlay */}
+                    {isVRMode && <VRSpace players={players} onExit={() => setIsVRMode(false)} />}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
